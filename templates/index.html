@@ -31,13 +31,13 @@
 </head>
 <body>
     <h1>AI Resume Tailor (LaTeX to PDF)</h1>
-    <p>Paste your full LaTeX resume source code below. The tool will edit the LaTeX code and generate a tailored, ATS-friendly PDF for you to download.</p>
+    <p>Paste your full LaTeX resume source code below. The tool will edit the LaTeX code, show you the preview, and then let you generate a tailored, ATS-friendly PDF.</p>
     <form action="/tailor" method="post">
         <label for="resume">Your LaTeX Resume Code:</label><br>
         <textarea id="resume" name="resume" placeholder="\\documentclass{article}..." required></textarea><br>
         <label for="job_description">Job Description:</label><br>
         <textarea id="job_description" name="job_description" required></textarea><br>
-        <input type="submit" value="Generate Tailored PDF">
+        <input type="submit" value="Generate Tailored LaTeX">
     </form>
 </body>
 </html>

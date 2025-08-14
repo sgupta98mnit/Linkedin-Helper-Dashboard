@@ -1,3 +1,11 @@
 Flask
-google-generativeai
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+Flask-Mail
+google-genai
 python-dotenv
+celery
+redis
+psycopg2-binary
+click
