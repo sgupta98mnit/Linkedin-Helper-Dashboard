@@ -4,9 +4,12 @@ import tempfile
 import io
 from flask import Flask, render_template, request, send_file
 import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure the Gemini API key
-# Make sure to set the GOOGLE_API_KEY environment variable
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
 app = Flask(__name__)
