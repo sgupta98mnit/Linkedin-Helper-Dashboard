@@ -1,43 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visa-Friendly Job Finder</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 2em;
-        }
-        h1 {
-            color: #333;
-        }
-        form {
-            margin-top: 2em;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            margin-bottom: 1em;
-        }
-        input[type="submit"] {
-            padding: 0.5em 1em;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <h1>AI Resume Tailor (LaTeX to PDF)</h1>
-    <p>Paste your full LaTeX resume source code below. The tool will edit the LaTeX code, show you the preview, and then let you generate a tailored, ATS-friendly PDF.</p>
-    <form action="/tailor" method="post">
-        <label for="resume">Your LaTeX Resume Code:</label><br>
-        <textarea id="resume" name="resume" placeholder="\\documentclass{article}..." required></textarea><br>
-        <label for="job_description">Job Description:</label><br>
-        <textarea id="job_description" name="job_description" required></textarea><br>
-        <input type="submit" value="Generate Tailored LaTeX">
-    </form>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}AI Resume Tailor - Visa-Friendly Job Finder{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-light p-5 rounded mb-4">
+            <h1 class="display-4">
+                <i class="fas fa-magic me-3"></i>AI Resume Tailor
+            </h1>
+            <p class="lead">Transform your resume with AI to match specific job requirements and increase your chances of landing visa-sponsoring positions.</p>
+            {% if not current_user.is_authenticated %}
+                <hr class="my-4">
+                <p>Get started by creating an account to access our AI-powered resume tailoring service.</p>
+                <a class="btn btn-primary btn-lg" href="{{ url_for('register') }}" role="button">
+                    <i class="fas fa-user-plus me-2"></i>Get Started
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Tailor Your Resume
+                </h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">Paste your full LaTeX resume source code below. Our AI will analyze the job description and optimize your resume's Projects section to match the requirements.</p>
+                
+                <form action="/tailor" method="post">
+                    <div class="mb-3">
+                        <label for="resume" class="form-label">Your LaTeX Resume Code:</label>
+                        <textarea id="resume" name="resume" class="form-control" rows="12" 
+                                placeholder="\documentclass{article}..." required></textarea>
+                        <div class="form-text">Paste your complete LaTeX resume source code here.</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="job_description" class="form-label">Job Description:</label>
+                        <textarea id="job_description" name="job_description" class="form-control" rows="8" 
+                                placeholder="Paste the job description here..." required></textarea>
+                        <div class="form-text">Include the complete job posting with requirements and responsibilities.</div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic me-2"></i>Generate Tailored Resume
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Find Visa-Friendly Jobs</h5>
+                <p class="card-text">Search for positions from employers that sponsor work visas, filtered by your specific visa requirements.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-robot fa-3x text-success mb-3"></i>
+                <h5 class="card-title">AI Resume Tailoring</h5>
+                <p class="card-text">Let our AI optimize your resume for each job application, highlighting relevant skills and experience.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Track Applications</h5>
+                <p class="card-text">Monitor your job applications, track response rates, and get insights on your job search progress.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

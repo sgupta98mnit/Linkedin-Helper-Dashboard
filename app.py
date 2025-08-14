@@ -2,13 +2,25 @@ import os
 import subprocess
 import tempfile
 import io
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, redirect, url_for, flash
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from google import genai
 from database import create_app, init_db, seed_db
-from models import db
+from models import db, User
 
 # Create Flask app using factory pattern
 app = create_app()
+
+# Configure Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Configure the Gemini client
 client = genai.Client(api_key=app.config['GOOGLE_API_KEY'])
@@ -160,7 +172,91 @@ def replace_projects_section(original_latex, new_projects_section):
 def index():
     return render_template('index.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration route."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    from forms import RegistrationForm
+    form = RegistrationForm()
+    
+    if form.validate_on_submit():
+        user = User(
+            email=form.email.data,
+            visa_status=form.visa_status.data,
+            experience_level=form.experience_level.data
+        )
+        user.set_password(form.password.data)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Registration successful! You can now log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('auth/register.html', form=form)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login route."""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    from forms import LoginForm
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            flash('Login successful!', 'success')
+            
+            # Redirect to next page if specified, otherwise to index
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
+        else:
+            flash('Invalid email or password.', 'error')
+    
+    return render_template('auth/login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    """User logout route."""
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """User profile management route."""
+    from forms import ProfileForm
+    form = ProfileForm()
+    
+    if form.validate_on_submit():
+        current_user.visa_status = form.visa_status.data
+        current_user.experience_level = form.experience_level.data
+        current_user.preferred_locations = form.preferred_locations.data
+        current_user.skills = form.skills.data
+        
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('profile'))
+    
+    # Pre-populate form with current user data
+    if request.method == 'GET':
+        form.visa_status.data = current_user.visa_status
+        form.experience_level.data = current_user.experience_level
+        form.preferred_locations.data = current_user.preferred_locations or []
+        form.skills.data = current_user.skills or []
+    
+    return render_template('auth/profile.html', form=form)
+
 @app.route('/tailor', methods=['POST'])
+@login_required
 def tailor():
     resume = request.form['resume']
     job_description = request.form['job_description']
@@ -257,6 +353,7 @@ You are an expert career coach and professional resume writer specializing in La
                          original_resume=resume)
 
 @app.route('/generate_pdf', methods=['POST'])
+@login_required
 def generate_pdf():
     latex_content = request.form['latex_content']
     
