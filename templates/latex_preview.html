@@ -12,6 +12,94 @@
                 </h3>
             </div>
             <div class="card-body">
+                {% if compatibility %}
+                <!-- Compatibility Analysis Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Compatibility Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <div class="display-6 mb-2">
+                                        {% set score_percent = (compatibility.score * 100)|round|int %}
+                                        <span class="badge bg-{% if score_percent >= 70 %}success{% elif score_percent >= 40 %}warning{% else %}danger{% endif %} fs-4">
+                                            {{ score_percent }}%
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">Compatibility Score</small>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                {% if compatibility.matched_keywords %}
+                                <div class="mb-3">
+                                    <h6 class="text-success">
+                                        <i class="fas fa-check-circle me-1"></i>Matched Keywords ({{ compatibility.matched_keywords|length }})
+                                    </h6>
+                                    <div>
+                                        {% for keyword in compatibility.matched_keywords[:10] %}
+                                        <span class="badge bg-success me-1 mb-1">{{ keyword }}</span>
+                                        {% endfor %}
+                                        {% if compatibility.matched_keywords|length > 10 %}
+                                        <span class="text-muted">+{{ compatibility.matched_keywords|length - 10 }} more</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if compatibility.missing_keywords %}
+                                <div class="mb-3">
+                                    <h6 class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Missing Keywords ({{ compatibility.missing_keywords|length }})
+                                    </h6>
+                                    <div>
+                                        {% for keyword in compatibility.missing_keywords[:10] %}
+                                        <span class="badge bg-warning text-dark me-1 mb-1">{{ keyword }}</span>
+                                        {% endfor %}
+                                        {% if compatibility.missing_keywords|length > 10 %}
+                                        <span class="text-muted">+{{ compatibility.missing_keywords|length - 10 }} more</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if compatibility.suggestions %}
+                                <div>
+                                    <h6 class="text-info">
+                                        <i class="fas fa-lightbulb me-1"></i>Suggestions
+                                    </h6>
+                                    <ul class="mb-0">
+                                        {% for suggestion in compatibility.suggestions %}
+                                        <li class="text-muted">{{ suggestion }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if selected_version %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Using resume version: <strong>{{ selected_version.name }}</strong>
+                    {% if selected_version.category %}({{ selected_version.category }}){% endif %}
+                </div>
+                {% endif %}
+                
+                {% if suggested_version and suggested_version != selected_version %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-star me-2"></i>
+                    <strong>Suggestion:</strong> Your "{{ suggested_version.name }}" resume version might be better suited for this job.
+                    <a href="{{ url_for('tailor') }}" class="alert-link">Try it instead?</a>
+                </div>
+                {% endif %}
+
                 <div class="alert alert-info">
                     <h5 class="alert-heading">
                         <i class="fas fa-info-circle me-2"></i>Instructions

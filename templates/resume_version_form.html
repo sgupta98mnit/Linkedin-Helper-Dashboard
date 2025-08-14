@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">{{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Give your resume version a descriptive name (e.g., "Software Engineer Resume", "Data Science Resume")</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select" + (" is-invalid" if form.category.errors else "")) }}
+                            {% if form.category.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.category.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Select the category that best describes this resume version</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.latex_content.label(class="form-label") }}
+                            {{ form.latex_content(class="form-control font-monospace" + (" is-invalid" if form.latex_content.errors else "")) }}
+                            {% if form.latex_content.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.latex_content.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Paste your complete LaTeX resume content here. This will be used as the base for tailoring to specific jobs.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('resume_versions') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Resume Versions
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- LaTeX Tips Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb"></i> LaTeX Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>Make sure your LaTeX document is complete with <code>\documentclass</code>, <code>\begin{document}</code>, and <code>\end{document}</code></li>
+                        <li>Use standard LaTeX packages like <code>geometry</code>, <code>enumitem</code>, and <code>hyperref</code> for best results</li>
+                        <li>Avoid special characters that need escaping: use <code>\&</code> for &, <code>\%</code> for %, and <code>\$</code> for $</li>
+                        <li>Test your LaTeX content in a LaTeX editor before saving to ensure it compiles correctly</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

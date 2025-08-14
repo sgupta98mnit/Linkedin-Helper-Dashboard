@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Tailor Resume - Visa-Friendly Job Finder{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-magic me-2"></i>Tailor Your Resume
+                </h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Select a saved resume version or paste your LaTeX code directly. Our AI will analyze the job description 
+                    and optimize your resume to match the requirements.
+                </p>
+                
+                <form action="{{ url_for('tailor') }}" method="post">
+                    <!-- Resume Selection Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Choose Resume Source</h5>
+                        
+                        <!-- Tab Navigation -->
+                        <ul class="nav nav-tabs" id="resumeSourceTabs" role="tablist">
+                            {% if resume_versions %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="saved-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#saved-resume" type="button" role="tab">
+                                    <i class="fas fa-folder me-1"></i>Saved Versions
+                                </button>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if not resume_versions %}active{% endif %}" 
+                                        id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual-resume" 
+                                        type="button" role="tab">
+                                    <i class="fas fa-edit me-1"></i>Manual Input
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <!-- Tab Content -->
+                        <div class="tab-content border border-top-0 p-3" id="resumeSourceTabsContent">
+                            {% if resume_versions %}
+                            <!-- Saved Resume Versions Tab -->
+                            <div class="tab-pane fade show active" id="saved-resume" role="tabpanel">
+                                <div class="mb-3">
+                                    <label for="resume_version_id" class="form-label">Select Resume Version:</label>
+                                    <select id="resume_version_id" name="resume_version_id" class="form-select">
+                                        <option value="">Choose a resume version...</option>
+                                        {% for version in resume_versions %}
+                                        <option value="{{ version.id }}" data-category="{{ version.category }}">
+                                            {{ version.name }} 
+                                            {% if version.category %}({{ version.category }}){% endif %}
+                                            - Created {{ version.created_at.strftime('%m/%d/%Y') }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        Select from your saved resume versions. The system will automatically suggest 
+                                        the best version based on the job description.
+                                    </div>
+                                </div>
+                                
+                                <!-- Resume Preview -->
+                                <div id="resume-preview" class="d-none">
+                                    <label class="form-label">Resume Preview:</label>
+                                    <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                        <pre id="resume-preview-content" class="mb-0 small"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Manual Input Tab -->
+                            <div class="tab-pane fade {% if not resume_versions %}show active{% endif %}" 
+                                 id="manual-resume" role="tabpanel">
+                                <div class="mb-3">
+                                    <label for="resume" class="form-label">Your LaTeX Resume Code:</label>
+                                    <textarea id="resume" name="resume" class="form-control font-monospace" rows="12" 
+                                            placeholder="\documentclass{article}..."></textarea>
+                                    <div class="form-text">Paste your complete LaTeX resume source code here.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Job Description Section -->
+                    <div class="mb-4">
+                        <label for="job_description" class="form-label">Job Description:</label>
+                        <textarea id="job_description" name="job_description" class="form-control" rows="8" 
+                                placeholder="Paste the job description here..." required></textarea>
+                        <div class="form-text">
+                            Include the complete job posting with requirements and responsibilities. 
+                            The system will analyze this to suggest the best resume version and tailor your content.
+                        </div>
+                    </div>
+                    
+                    <!-- Compatibility Analysis Preview -->
+                    <div id="compatibility-preview" class="alert alert-info d-none">
+                        <h6><i class="fas fa-chart-line me-2"></i>Compatibility Analysis</h6>
+                        <div id="compatibility-content"></div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic me-2"></i>Generate Tailored Resume
+                        </button>
+                    </div>
+                </form>
+                
+                {% if not resume_versions %}
+                <div class="alert alert-info mt-4">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Tip</h6>
+                    <p class="mb-2">
+                        Save your resume versions to make tailoring faster and more efficient! 
+                        <a href="{{ url_for('new_resume_version') }}" class="alert-link">Create your first resume version</a>.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store resume versions data for JavaScript access
+const resumeVersions = {
+    {% for version in resume_versions %}
+    {{ version.id }}: {
+        name: "{{ version.name }}",
+        category: "{{ version.category or '' }}",
+        content: {{ version.latex_content|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Handle resume version selection
+document.getElementById('resume_version_id')?.addEventListener('change', function() {
+    const versionId = this.value;
+    const previewDiv = document.getElementById('resume-preview');
+    const previewContent = document.getElementById('resume-preview-content');
+    
+    if (versionId && resumeVersions[versionId]) {
+        const version = resumeVersions[versionId];
+        previewContent.textContent = version.content.substring(0, 500) + '...';
+        previewDiv.classList.remove('d-none');
+    } else {
+        previewDiv.classList.add('d-none');
+    }
+});
+
+// Handle tab switching to clear form data
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(event) {
+        const targetTab = event.target.getAttribute('data-bs-target');
+        
+        if (targetTab === '#manual-resume') {
+            // Clear saved resume selection when switching to manual
+            document.getElementById('resume_version_id').value = '';
+            document.getElementById('resume-preview').classList.add('d-none');
+        } else if (targetTab === '#saved-resume') {
+            // Clear manual input when switching to saved
+            document.getElementById('resume').value = '';
+        }
+    });
+});
+
+// Auto-suggest resume version based on job description (optional enhancement)
+document.getElementById('job_description').addEventListener('blur', function() {
+    const jobDescription = this.value.toLowerCase();
+    const versionSelect = document.getElementById('resume_version_id');
+    
+    if (!jobDescription || !versionSelect) return;
+    
+    // Simple keyword matching for auto-suggestion
+    const categoryKeywords = {
+        'Engineering': ['software', 'developer', 'engineer', 'programming', 'coding'],
+        'Data Science': ['data', 'analytics', 'machine learning', 'statistics', 'python'],
+        'Product': ['product manager', 'product', 'roadmap', 'stakeholder'],
+        'Design': ['design', 'ui', 'ux', 'figma', 'sketch']
+    };
+    
+    let suggestedCategory = null;
+    let maxMatches = 0;
+    
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        const matches = keywords.filter(keyword => jobDescription.includes(keyword)).length;
+        if (matches > maxMatches) {
+            maxMatches = matches;
+            suggestedCategory = category;
+        }
+    }
+    
+    // Highlight suggested resume versions
+    if (suggestedCategory) {
+        const options = versionSelect.querySelectorAll('option');
+        options.forEach(option => {
+            const category = option.getAttribute('data-category');
+            if (category === suggestedCategory) {
+                option.style.backgroundColor = '#e3f2fd';
+                option.textContent = option.textContent + ' ⭐ Suggested';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

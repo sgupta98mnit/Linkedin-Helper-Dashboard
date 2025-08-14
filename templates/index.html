@@ -33,27 +33,35 @@
             <div class="card-body">
                 <p class="text-muted mb-4">Paste your full LaTeX resume source code below. Our AI will analyze the job description and optimize your resume's Projects section to match the requirements.</p>
                 
-                <form action="/tailor" method="post">
-                    <div class="mb-3">
-                        <label for="resume" class="form-label">Your LaTeX Resume Code:</label>
-                        <textarea id="resume" name="resume" class="form-control" rows="12" 
-                                placeholder="\documentclass{article}..." required></textarea>
-                        <div class="form-text">Paste your complete LaTeX resume source code here.</div>
+                <div class="text-center">
+                    <a href="{{ url_for('tailor') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-magic me-2"></i>Start Tailoring Your Resume
+                    </a>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-folder fa-2x text-primary mb-3"></i>
+                                <h5 class="card-title">Use Saved Resume Versions</h5>
+                                <p class="card-text">Select from your saved resume versions for quick tailoring to different job types.</p>
+                                <a href="{{ url_for('resume_versions') }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-folder-open me-1"></i>Manage Resumes
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="mb-4">
-                        <label for="job_description" class="form-label">Job Description:</label>
-                        <textarea id="job_description" name="job_description" class="form-control" rows="8" 
-                                placeholder="Paste the job description here..." required></textarea>
-                        <div class="form-text">Include the complete job posting with requirements and responsibilities.</div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-line fa-2x text-success mb-3"></i>
+                                <h5 class="card-title">Smart Compatibility Analysis</h5>
+                                <p class="card-text">Get detailed analysis of how well your resume matches job requirements with actionable suggestions.</p>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-magic me-2"></i>Generate Tailored Resume
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>

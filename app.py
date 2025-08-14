@@ -255,11 +255,48 @@ def profile():
     
     return render_template('auth/profile.html', form=form)
 
-@app.route('/tailor', methods=['POST'])
+@app.route('/tailor', methods=['GET', 'POST'])
 @login_required
 def tailor():
-    resume = request.form['resume']
+    from services.resume_service import ResumeTailoringService
+    from models.resume_version import ResumeVersion
+    
+    tailoring_service = ResumeTailoringService()
+    
+    if request.method == 'GET':
+        # Show the tailoring form with resume version selection
+        resume_versions = current_user.resume_versions.all()
+        return render_template('tailor_form.html', resume_versions=resume_versions)
+    
+    # Handle POST request
+    resume_version_id = request.form.get('resume_version_id')
     job_description = request.form['job_description']
+    
+    # Get resume content either from version or direct input
+    if resume_version_id:
+        resume_version = ResumeVersion.query.filter_by(
+            id=resume_version_id,
+            user_id=current_user.id
+        ).first_or_404()
+        resume = resume_version.latex_content
+        selected_version = resume_version
+    else:
+        resume = request.form['resume']
+        selected_version = None
+    
+    # Analyze compatibility
+    compatibility = tailoring_service.analyze_compatibility(resume, job_description)
+    
+    # Suggest best resume version if none was selected
+    suggested_version = None
+    if not resume_version_id:
+        suggested_version = tailoring_service.suggest_resume_version(current_user.id, job_description)
+        
+        # If we have a better suggestion, use it
+        if suggested_version and compatibility.score < 0.5:
+            resume = suggested_version.latex_content
+            selected_version = suggested_version
+            compatibility = tailoring_service.analyze_compatibility(resume, job_description)
 
     prompt = f"""
 You are an expert career coach and professional resume writer specializing in LaTeX resumes. Your task is to edit ONLY the \\section{{Projects}} content in the provided LaTeX resume to make it more ATS-friendly for the given job description.
@@ -350,7 +387,228 @@ You are an expert career coach and professional resume writer specializing in La
     # Return the LaTeX content for review instead of immediately generating PDF
     return render_template('latex_preview.html', 
                          latex_content=final_latex,
-                         original_resume=resume)
+                         original_resume=resume,
+                         compatibility=compatibility,
+                         selected_version=selected_version,
+                         suggested_version=suggested_version)
+
+@app.route('/resume-versions')
+@login_required
+def resume_versions():
+    """Display all resume versions for the current user."""
+    versions = current_user.resume_versions.order_by(db.desc(db.text('created_at'))).all()
+    return render_template('resume_versions.html', versions=versions)
+
+@app.route('/resume-versions/new', methods=['GET', 'POST'])
+@login_required
+def new_resume_version():
+    """Create a new resume version."""
+    from forms import ResumeVersionForm
+    from models.resume_version import ResumeVersion
+    
+    form = ResumeVersionForm()
+    
+    if form.validate_on_submit():
+        # Check if user already has a resume with this name
+        existing = ResumeVersion.query.filter_by(
+            user_id=current_user.id,
+            name=form.name.data
+        ).first()
+        
+        if existing:
+            flash('You already have a resume version with this name. Please choose a different name.', 'error')
+            return render_template('resume_version_form.html', form=form, title='New Resume Version')
+        
+        version = ResumeVersion(
+            user_id=current_user.id,
+            name=form.name.data,
+            category=form.category.data,
+            latex_content=form.latex_content.data
+        )
+        
+        db.session.add(version)
+        db.session.commit()
+        
+        flash(f'Resume version "{form.name.data}" created successfully!', 'success')
+        return redirect(url_for('resume_versions'))
+    
+    return render_template('resume_version_form.html', form=form, title='New Resume Version')
+
+@app.route('/resume-versions/<int:version_id>')
+@login_required
+def view_resume_version(version_id):
+    """View a specific resume version."""
+    from models.resume_version import ResumeVersion
+    
+    version = ResumeVersion.query.filter_by(
+        id=version_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    return render_template('resume_version_detail.html', version=version)
+
+@app.route('/resume-versions/<int:version_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_resume_version(version_id):
+    """Edit an existing resume version."""
+    from forms import ResumeVersionForm
+    from models.resume_version import ResumeVersion
+    
+    version = ResumeVersion.query.filter_by(
+        id=version_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    form = ResumeVersionForm()
+    
+    if form.validate_on_submit():
+        # Check if user is trying to rename to an existing name (excluding current version)
+        existing = ResumeVersion.query.filter_by(
+            user_id=current_user.id,
+            name=form.name.data
+        ).filter(ResumeVersion.id != version_id).first()
+        
+        if existing:
+            flash('You already have a resume version with this name. Please choose a different name.', 'error')
+            return render_template('resume_version_form.html', form=form, title='Edit Resume Version')
+        
+        version.name = form.name.data
+        version.category = form.category.data
+        version.latex_content = form.latex_content.data
+        
+        db.session.commit()
+        
+        flash(f'Resume version "{form.name.data}" updated successfully!', 'success')
+        return redirect(url_for('view_resume_version', version_id=version.id))
+    
+    # Pre-populate form with current data
+    if request.method == 'GET':
+        form.name.data = version.name
+        form.category.data = version.category
+        form.latex_content.data = version.latex_content
+    
+    return render_template('resume_version_form.html', form=form, title='Edit Resume Version', version=version)
+
+@app.route('/resume-versions/<int:version_id>/delete', methods=['POST'])
+@login_required
+def delete_resume_version(version_id):
+    """Delete a resume version."""
+    from models.resume_version import ResumeVersion
+    
+    version = ResumeVersion.query.filter_by(
+        id=version_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    version_name = version.name
+    db.session.delete(version)
+    db.session.commit()
+    
+    flash(f'Resume version "{version_name}" deleted successfully!', 'success')
+    return redirect(url_for('resume_versions'))
+
+@app.route('/resume-versions/<int:version_id>/duplicate', methods=['POST'])
+@login_required
+def duplicate_resume_version(version_id):
+    """Duplicate an existing resume version."""
+    from models.resume_version import ResumeVersion
+    
+    original = ResumeVersion.query.filter_by(
+        id=version_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    # Create a unique name for the duplicate
+    base_name = f"{original.name} (Copy)"
+    duplicate_name = base_name
+    counter = 1
+    
+    while ResumeVersion.query.filter_by(user_id=current_user.id, name=duplicate_name).first():
+        duplicate_name = f"{base_name} {counter}"
+        counter += 1
+    
+    duplicate = ResumeVersion(
+        user_id=current_user.id,
+        name=duplicate_name,
+        category=original.category,
+        latex_content=original.latex_content
+    )
+    
+    db.session.add(duplicate)
+    db.session.commit()
+    
+    flash(f'Resume version duplicated as "{duplicate_name}"!', 'success')
+    return redirect(url_for('resume_versions'))
+
+@app.route('/api/analyze-compatibility', methods=['POST'])
+@login_required
+def analyze_compatibility():
+    """API endpoint for resume-job compatibility analysis."""
+    from services.resume_service import ResumeTailoringService
+    from models.resume_version import ResumeVersion
+    
+    data = request.get_json()
+    if not data:
+        return {'error': 'No data provided'}, 400
+    
+    job_description = data.get('job_description', '')
+    resume_version_id = data.get('resume_version_id')
+    resume_content = data.get('resume_content', '')
+    
+    if not job_description:
+        return {'error': 'Job description is required'}, 400
+    
+    # Get resume content
+    if resume_version_id:
+        version = ResumeVersion.query.filter_by(
+            id=resume_version_id,
+            user_id=current_user.id
+        ).first()
+        if not version:
+            return {'error': 'Resume version not found'}, 404
+        resume_content = version.latex_content
+    elif not resume_content:
+        return {'error': 'Resume content or version ID is required'}, 400
+    
+    # Analyze compatibility
+    tailoring_service = ResumeTailoringService()
+    compatibility = tailoring_service.analyze_compatibility(resume_content, job_description)
+    
+    # Get suggested version
+    suggested_version = tailoring_service.suggest_resume_version(current_user.id, job_description)
+    
+    return {
+        'compatibility': {
+            'score': compatibility.score,
+            'matched_keywords': compatibility.matched_keywords,
+            'missing_keywords': compatibility.missing_keywords,
+            'suggestions': compatibility.suggestions
+        },
+        'suggested_version': {
+            'id': suggested_version.id,
+            'name': suggested_version.name,
+            'category': suggested_version.category
+        } if suggested_version else None
+    }
+
+@app.route('/api/resume-versions/<int:version_id>/content')
+@login_required
+def get_resume_version_content(version_id):
+    """API endpoint to get resume version content."""
+    from models.resume_version import ResumeVersion
+    
+    version = ResumeVersion.query.filter_by(
+        id=version_id,
+        user_id=current_user.id
+    ).first_or_404()
+    
+    return {
+        'id': version.id,
+        'name': version.name,
+        'category': version.category,
+        'content': version.latex_content,
+        'created_at': version.created_at.isoformat()
+    }
 
 @app.route('/generate_pdf', methods=['POST'])
 @login_required

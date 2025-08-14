@@ -103,3 +103,34 @@ class ProfileForm(FlaskForm):
     ])
     
     submit = SubmitField('Update Profile')
+
+class ResumeVersionForm(FlaskForm):
+    """Form for creating and editing resume versions."""
+    name = StringField('Resume Name', validators=[
+        DataRequired(), 
+        Length(min=1, max=255, message='Name must be between 1 and 255 characters')
+    ], render_kw={'placeholder': 'e.g., Software Engineer Resume'})
+    
+    category = SelectField('Category', choices=[
+        ('', 'Select a category'),
+        ('Engineering', 'Software Engineering'),
+        ('Data Science', 'Data Science'),
+        ('Product', 'Product Management'),
+        ('Design', 'Design'),
+        ('Marketing', 'Marketing'),
+        ('Sales', 'Sales'),
+        ('Finance', 'Finance'),
+        ('Operations', 'Operations'),
+        ('Other', 'Other')
+    ], validators=[DataRequired()])
+    
+    latex_content = TextAreaField('LaTeX Content', validators=[
+        DataRequired(),
+        Length(min=10, message='LaTeX content is required')
+    ], render_kw={
+        'rows': 20, 
+        'placeholder': 'Paste your LaTeX resume content here...',
+        'class': 'form-control font-monospace'
+    })
+    
+    submit = SubmitField('Save Resume Version')
